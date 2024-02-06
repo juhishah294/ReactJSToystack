@@ -1,11 +1,28 @@
-FROM node:16
+# Stage 1: Build the React app
+FROM node:14 AS build
 
+WORKDIR /app
+
+# Copy package.json and package-lock.json to leverage Docker cache
 COPY package*.json ./
 
-WORKDIR /opt/server/backend-test
+# Install dependencies
+RUN npm install
 
+# Copy the entire application
 COPY . .
 
-RUN npm install
+# Build the React app
+RUN npm run build
+
+# Stage 2: Create a smaller image for serving the application
+FROM nginx:1.21.6-alpine
+
+# Copy the build output from the previous stage
+COPY --from=build /app/build /usr/share/nginx/html
+
+# Expose port 3000
 EXPOSE 3000
-CMD [ "node", "index.js" ]
+
+# Start Nginx
+CMD ["nginx", "-g", "daemon off;"]
